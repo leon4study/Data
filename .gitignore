@@ -14,12 +14,9 @@
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
+Data/
+session_handout/
 
-#
-*.csv
-*.pkl
-*.pptx
-*.mp4
 
 # Package Files #
 *.jar
