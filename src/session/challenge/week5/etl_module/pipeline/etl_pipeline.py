@@ -20,9 +20,9 @@ def main(config):
     1. 환경 변수를 로드하여 Weather API와 MySQL 데이터베이스 연결에 필요한 정보를 가져옵니다.
     2. WeatherApiClient와 MySqlClient 객체를 생성합니다.
     3. ETL 프로세스를 순차적으로 수행합니다:
-       - 데이터를 Weather API에서 추출합니다.
-       - 추출된 데이터를 변환하여 필요한 형태로 가공합니다.
-       - 가공된 데이터를 MySQL 데이터베이스에 적재합니다.
+        - 데이터를 Weather API에서 추출합니다.
+        - 추출된 데이터를 변환하여 필요한 형태로 가공합니다.
+        - 가공된 데이터를 MySQL 데이터베이스에 적재합니다.
     """
     # 현재 날짜와 시간을 기반으로 Log 파일명 생성
     current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     os.makedirs(log_folder_path, exist_ok=True)
 
     # 스케줄러 생성
-    schedule.every(config.get("run_minutes")).minutes.do(main, config=config)
+    schedule.every(config.get("run_minutes")).seconds.do(main, config=config)
 
     while True:
         schedule.run_pending()

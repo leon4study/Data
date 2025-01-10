@@ -5,4 +5,7 @@ cities:
   - "Chicago"
   - "Houston"
   - "Phoenix"
+  - "Seloul"
+  - "Busan"
+  - "Kyoto"
 run_minutes: 5

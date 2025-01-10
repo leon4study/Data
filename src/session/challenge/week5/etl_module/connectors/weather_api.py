@@ -19,7 +19,7 @@ class WeatherApiClient:
         Parameters:
         - city_name (str): 날씨 정보를 조회할 도시 이름.
         - temperature_units (str): 온도 단위 (기본값은 'metric'으로 섭씨 기준).
-                                   'metric'은 섭씨, 'imperial'은 화씨, 'standard'는 켈빈 단위를 의미합니다.
+                                'metric'은 섭씨, 'imperial'은 화씨, 'standard'는 켈빈 단위를 의미합니다.
 
         Returns:
         - dict: 요청한 도시의 날씨 데이터가 포함된 JSON 응답을 반환합니다.

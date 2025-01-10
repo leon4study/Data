@@ -1,10 +1,11 @@
 from etl_module.connectors.weather_api import WeatherApiClient
 from etl_module.connectors.mysql import MySqlClient
+
 import pandas as pd
 from sqlalchemy import MetaData, Table, Column, String, DateTime, Integer, Float
 
 
-def extract_weather(weather_api_client: WeatherApiClient) -> pd.DataFrame:
+def extract_weather(weather_api_client: WeatherApiClient, cities = ["seoul", "busan", "sejong"] ) -> pd.DataFrame:
     """
     여러 도시의 날씨 데이터를 추출합니다.
 
@@ -14,7 +15,7 @@ def extract_weather(weather_api_client: WeatherApiClient) -> pd.DataFrame:
     Returns:
     - pd.DataFrame: 지정된 도시들의 날씨 데이터를 포함하는 DataFrame.
     """
-    cities = ["seoul", "busan", "sejong", "daegu", "incheon", "daejeon", "ulsan"]
+
     weather_data = []
     for city_name in cities:
         weather_data.append(weather_api_client.get_city(city_name=city_name))

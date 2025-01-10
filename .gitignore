@@ -19,12 +19,13 @@
 *.csv
 *.mp4
 *.pptx
+*.pdf
 
 #
 Data/
 session_handout/
 memo/
-tableau/
+Data_4/tableau/
 
 # Package Files #
 *.jar

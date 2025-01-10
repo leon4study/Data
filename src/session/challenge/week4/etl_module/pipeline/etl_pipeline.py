@@ -18,6 +18,7 @@ def main():
     """
     print('ETL 시작')
 
+    print('.env 파일 읽기 시작')
     load_dotenv()
     API_KEY = os.environ.get("API_KEY")
     DB_SERVER_HOST = os.environ.get("DB_SERVER_HOST")
@@ -25,7 +26,9 @@ def main():
     DB_PASSWORD = os.environ.get("DB_PASSWORD")
     DB_DATABASE = os.environ.get("DB_DATABASE")
     DB_PORT = os.environ.get("DB_PORT")
+    print('.env 파일 읽기 끝')
 
+    print('객체 생성 (Weather, Mysql) 시작')
     weather_api_client = WeatherApiClient(api_key=API_KEY)
     my_sql_client = MySqlClient(
         server_name=DB_SERVER_HOST,
@@ -34,20 +37,24 @@ def main():
         password=DB_PASSWORD,
         port=DB_PORT,
     )
+    print('객체 생성 (Weather, Mysql) 끝')
 
     # ETL 실행
+    
     print('E 시작')
-    df = extract_weather(weather_api_client=weather_api_client)
-    print('E 시작')
+    cities = ["seoul", "busan", "sejong", "daegu", "incheon", "daejeon", "ulsan", 'Singapore','beijing', 'tokyo']
+    df = extract_weather(weather_api_client=weather_api_client, cities = cities)
+    print('E 종료')
 
-    print('E 시작')
+    print('T 시작')
     clean_df = transform_weather(df)
-    print('E 시작')
+    print('T 시작')
 
-    print('E 시작')
+    print('L 시작')
     print(clean_df.shape)
     load_weather(df=clean_df, my_sql_client=my_sql_client)
-    print('E 시작')
+    print('L 시작')
+    print("ETL 종료")
 
 
 if __name__ == "__main__":
