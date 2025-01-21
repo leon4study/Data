@@ -21,16 +21,19 @@ def load_items(
         metadata,
         Column("ASIN", String(13), primary_key=True),
         Column("title", Text, nullable=False),
+        Column("order", INTEGER, nullable=False),
         Column("category", Text, nullable=True),
         Column("brand", Text, nullable=False),
         Column("price", Float, nullable=True),
         Column("global_rating_count", String(11), nullable=True),
+        Column("description", JSON, nullable=True),
         Column("Special_Feature", Text, nullable=True),
         Column("total_star_mean", Float, nullable=True),
         Column("detail_dict", JSON, nullable=True),
         Column("best_sellers_rank_Feature", Text, nullable=True),
-
+        Column("Ingredients", Text, nullable=True),
     )
+
     if method == "insert":
         my_sql_client.insert(df=df, table=table, metadata=metadata)
     elif method == "upsert":
