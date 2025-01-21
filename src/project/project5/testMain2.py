@@ -13,6 +13,7 @@ import os, json, time
 import pandas as pd
 import random
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
 load_dotenv()
 
 # 아마존 크롤링 함수
@@ -196,7 +197,7 @@ def click_next_review_page3():
         return True  # 다음 페이지로 이동
 
     except Exception as e:
-        print(f"Error occurred: {e}")
+        print(f"Error occurred in click_next_review_page3 : {e}")
         return False  # 반복문 종료를 위한 False 반환
     
 
@@ -239,9 +240,13 @@ def score_filter():
 
 
 def get_asin_from_sql():
-    query = "SELECT ASIN FROM items"  # items 테이블에서 모든 데이터를 조회
-    df = my_sql_client.fetch_as_dataframe(query)
-    asin_list = df['ASIN'].to_list()
+    asin_list =[]
+    try :
+        query = "SELECT ASIN FROM items"  # items 테이블에서 모든 데이터를 조회
+        df = my_sql_client.fetch_as_dataframe(query)
+        asin_list = df['ASIN'].to_list()
+    except Exception as e:
+        print(f"{e}")
     return asin_list
 
 
@@ -279,25 +284,37 @@ def crawl_amazon(keyword="skin+care"):
             time.sleep(0.7)
             time.sleep(wait_time)
 
-            # 모든 리스트 아이템 가져오기
-            items = driver.find_elements(By.CSS_SELECTOR, '[role="listitem"]')
+            # 특정 부모의 바로 아래 자식 리스트 아이템 가져오기
+            parent_selector = 'div.s-main-slot.s-result-list.s-search-results.sg-row'
+            child_selector = '[role="listitem"]'
+            selector = f"{parent_selector} > {child_selector}"
+            items = driver.find_elements(By.CSS_SELECTOR, selector)
+
             print("\n", len(items), "\n")
             item_list = []
             opened = True
+
             # 각 아이템 클릭 및 상세 정보 크롤링
             for idx, item in enumerate(items):
                 try:
+                    time.sleep(0.1)
                     ASIN = item.get_attribute("data-asin")
+                    print(f"Current ASIN: {ASIN}")
+                    print(f"ASIN List: {ASIN_list}")
                     if ASIN in ASIN_list:
+                        print(f"Duplicate ASIN detected: {ASIN}")
+                        print("continued")
                         continue  # 이미 처리된 ASIN은 건너뜀
-
                     try:
                         if item.find_elements(By.CLASS_NAME, "puis-sponsored-label-text"):  # Sponsored 라벨 존재 확인
                             continue  # Sponsored 항목은 건너뜀
                     except Exception as e:
                         print(f"Sponsored 라벨 확인 중 에러 발생: {e}")
                         # 에러가 발생하면 Sponsored 여부를 무시하고 다음 로직 실행
-
+                except Exception as e:
+                    print(f"{e}")
+                
+                try :
                     cnt += 1
                     ASIN_list.append(ASIN)
 
@@ -305,7 +322,6 @@ def crawl_amazon(keyword="skin+care"):
                     item_link = item.find_element(By.CSS_SELECTOR, 'a.a-link-normal')
                     item_url = item_link.get_attribute("href")
                     
-
                     # 새 탭에서 상세 정보 열기
                     driver.execute_script("window.open(arguments[0], '_blank');", item_url)
                     driver.switch_to.window(driver.window_handles[-1])  # 새 탭으로 전환
@@ -334,8 +350,13 @@ def crawl_amazon(keyword="skin+care"):
                     special_feature = driver.find_element(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word")) > 0 else "No special feature"
                     price = driver.find_element(By.CLASS_NAME, "a-price-whole").text + "." + driver.find_element(By.CLASS_NAME, "a-price-fraction").text
                     total_star = driver.find_element(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base").text if len(driver.find_elements(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base")) > 0 else "No rating"
-                    global_rating_count = driver.find_element(By.CSS_SELECTOR, )
                     
+                    # total_review counts
+                    totaL_review_counts = driver.find_element(By.CSS_SELECTOR, "#acrCustomerReviewText").text
+                    global_rating_count = int(totaL_review_counts.strip("()").replace(",", ""))
+                    
+
+
                     # Best Sellers Rank 정보 가져오기
                     best_sellers_elements = driver.find_elements(By.CSS_SELECTOR, "ul.detail-bullet-list > li > span.a-list-item")
 
@@ -354,16 +375,16 @@ def crawl_amazon(keyword="skin+care"):
                     print(f"index: {idx}")
                     print(f"ASIN: {ASIN}")
                     print(f"Title: {title}")
-                    print(f"brand: {brand}")
+                    print(f"global_rating_count: {global_rating_count}")
                     print(f"price: {price}")
                     print()
 
                     item_list.append({
-                                        "ASIN" : ASIN,
+                                        "ASIN" : ASIN, 
                                         "title" : title,
-                                        "brand" : brand,
+                                        "brand" : brand, 
                                         "price" : price,
-                                        "review_total_count" : review_total_count,
+                                        "global_rating_count" : global_rating_count,
                                         "Special_Feature" : special_feature,
                                         "total_star_mean" : total_star,
                                         "detail_dict" : detail_dict,
@@ -393,15 +414,20 @@ def crawl_amazon(keyword="skin+care"):
                             max_reviews = 50  # 최대 수집 리뷰 수
 
                             while review_count < max_reviews:
-                                #wait_time = random.uniform(0.02, 0.08)
-                                driver.implicitly_wait(7)
+                                time.sleep(0.1)
+                                
+                                # 리뷰 컨테이너가 로드될 때까지 기다림
+                                wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'div[class="a-section celwidget"]')))
                                 detail_reviews = driver.find_elements(By.CSS_SELECTOR, 'div[class="a-section celwidget"]')
+
 
                                 for detail_review in detail_reviews:  # 현재 페이지에서 모든 리뷰를 처리
                                     if review_count >= max_reviews:  # 최대 리뷰 수에 도달하면 종료
                                         break
                                     try:
-                                        date = detail_review.find_element(By.CSS_SELECTOR, "span[data-hook='review-date']").text if len(detail_review.find_elements(By.CSS_SELECTOR, "span[data-hook='review-date']")) > 0 else "No date"
+                                        date = wait.until(
+                                            EC.presence_of_element_located((By.CSS_SELECTOR, "span[data-hook='review-date']"))
+                                        ).text if len(driver.find_elements(By.CSS_SELECTOR, "span[data-hook='review-date']")) > 0 else "No date"
                                         review_title = detail_review.find_element(By.CLASS_NAME, "review-title").text if len(detail_review.find_elements(By.CLASS_NAME, "review-title")) > 0 else "No title"
                                         review_rating_element =  detail_review.find_element(By.CSS_SELECTOR, "span.a-icon-alt")
                                         review_rating = driver.execute_script("return arguments[0].innerText;", review_rating_element)
@@ -470,21 +496,22 @@ def crawl_amazon(keyword="skin+care"):
                         except Exception as e:
                             print(print(f"Error processing item {idx + 1}: {e}"))
                         print("=" * 50)
-
+                        
+                    else:
+                        print("no_reviews")
                 except Exception as e:
-                    print(f"Error processing item {idx + 1}: {e}")
-                    continue
-                finally :
                     if opened:
                         # 새 탭 닫기
                         driver.close()
                         driver.switch_to.window(driver.window_handles[0])  # 원래 탭으로 돌아가기
                         opened = False
+                    print(f"Error processing item {idx + 1}: {e}")
+                    continue
             time.sleep(0.5)
+            print("여기")
             click_next_item_page2()
-
     except Exception as e:
-        print(f"Error occurred: {e}")
+        print(f"Error occurred in final excepiton: {e}")
     finally:
         driver.quit()
 

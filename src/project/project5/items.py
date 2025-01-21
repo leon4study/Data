@@ -1,6 +1,6 @@
 from mysql1 import MySqlClient
 import pandas as pd
-from sqlalchemy import MetaData, Column, String,Float, Table, Text, JSON
+from sqlalchemy import MetaData, Column, String,Float, Table, Text, JSON, INTEGER
 
 def load_items(
     df: pd.DataFrame,
@@ -21,8 +21,10 @@ def load_items(
         metadata,
         Column("ASIN", String(13), primary_key=True),
         Column("title", Text, nullable=False),
-        Column("brand", String(20), nullable=False),
+        Column("category", Text, nullable=True),
+        Column("brand", Text, nullable=False),
         Column("price", Float, nullable=True),
+        Column("global_rating_count", String(11), nullable=True),
         Column("Special_Feature", Text, nullable=True),
         Column("total_star_mean", Float, nullable=True),
         Column("detail_dict", JSON, nullable=True),

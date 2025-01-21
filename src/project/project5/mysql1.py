@@ -68,8 +68,21 @@ class MySqlClient:
         - table (Table): 데이터 삽입을 위한 SQLAlchemy Table 객체.
         - metadata (MetaData): 테이블 정의를 포함하는 SQLAlchemy MetaData 객체.
         """
-        self.create_table(metadata=metadata)
-        df.to_sql(name=table.name, con=self.engine, if_exists="append", index=False)
+        try:
+            # 엔진 연결
+            with self.engine.connect() as connection:
+                # 기존 데이터 가져오기
+                existing_data = pd.read_sql_table(table.name, connection)
+                
+                # 새 데이터에서 중복 제거
+                new_data = df[~df[table.primary_key.columns.keys()].isin(existing_data[table.primary_key.columns.keys()])]
+                
+                # 새로운 데이터 삽입
+                new_data.to_sql(name=table.name, con=connection, if_exists="append", index=False)
+        except Exception as e:
+            print(f"Error occurred during insert: {e}")
+
+
 
     def upsert(self, df: pd.DataFrame, table: Table, metadata: MetaData) -> None:
         """

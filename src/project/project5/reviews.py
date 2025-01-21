@@ -21,6 +21,8 @@ def load_reviews(
         metadata,
         Column("review_num", String(15), nullable=False, primary_key=True),
         Column("ASIN", String(13), nullable=False),
+        Column("customer_id", String(17), nullable=False),
+        Column("customer_name", Text, nullable=False),
         Column("title", Text, nullable=False),
         Column("date", Text, nullable=False),
         Column("review_rating", Text, nullable=True),
