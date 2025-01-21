@@ -1,6 +1,6 @@
 from mysql1 import MySqlClient
 import pandas as pd
-from sqlalchemy import MetaData, Column, String,Float, Table, Text, JSON, INTEGER
+from sqlalchemy import MetaData, Column, String,Float, Table, Text, JSON, INTEGER, BOOLEAN
 
 def load_items(
     df: pd.DataFrame,
@@ -32,6 +32,7 @@ def load_items(
         Column("detail_dict", JSON, nullable=True),
         Column("best_sellers_rank_Feature", Text, nullable=True),
         Column("Ingredients", Text, nullable=True),
+        Column("is_bundle", BOOLEAN, nullable=True),
     )
 
     if method == "insert":

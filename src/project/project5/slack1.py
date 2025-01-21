@@ -5,7 +5,8 @@ import requests
 
 def send_msg(msg):
     
-    url = "https://hooks.slack.com/services/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"
+    url = "https://hooks.slack.com/services/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"
+    
     message = ("Crawling 알림\n" + msg) 
     title = (f"New Incoming Message :zap:") # 타이틀 입력
     slack_data = {

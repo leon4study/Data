@@ -43,7 +43,6 @@ my_sql_client = MySqlClient(
 
 ASIN_list = []
 
-
 def amazon_login(id: str, pw: str):
     """
     Amazon 계정으로 로그인하는 함수.
@@ -290,8 +289,13 @@ def click_and_wait_for_refresh(brand:str):
         
         if brand == brands[0]:
             element_locator = (By.CSS_SELECTOR, "#p_123\\/241477 > span > a > span")  # cosRX
+        elif brand == brands[1]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/591445 > span > a > span")
         elif brand == brands[2]:
             element_locator = (By.CSS_SELECTOR, "#p_123\\/452045 > span > a > span")
+        elif brand == brands[3]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/312482 > span > a > span")
+            
         # 클릭할 요소의 CSS 셀렉터
         
         # 요소가 클릭 가능할 때까지 기다림
@@ -344,7 +348,7 @@ def get_description():
         return None
 
 
-def scrape_product_details():
+def cosrx_description_to_json():
     try:
         # 결과를 저장할 딕셔너리
         result = {}
@@ -394,7 +398,7 @@ def crawl_amazon(keyword="skin+care"):
     open_amazon_keyword(keyword)
     amazon_login(ID, PW)
     brands = ["COSRX","Beauty of Joseon","Dr. Jart+","PURITO","I'm from"]
-    click_and_wait_for_refresh(brands[0])
+    click_and_wait_for_refresh(brands[3])
     
 
     try:
@@ -463,6 +467,7 @@ def crawl_amazon(keyword="skin+care"):
                     
                     # 각 아이템 클릭 및 상세 정보 크롤링
                     for idx, item in enumerate(items):
+                        is_bundle = False
                         print(f"index: {idx}")
                         try:
                             ASIN = item.get_attribute("data-asin")
@@ -506,62 +511,53 @@ def crawl_amazon(keyword="skin+care"):
                                 # 상품 제목
                                 title = driver.find_element(By.ID, "productTitle").text
                                 print(f"Title: {title}")
+                                reviews = driver.find_element(By.ID, "acrCustomerReviewText").text if len(driver.find_elements(By.ID, "acrCustomerReviewText")) > 0 else "No ratings"
+                                brand = driver.find_element(By.CSS_SELECTOR, "tr.po-brand .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-brand .po-break-word")) > 0 else "No brand"
 
-                                # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-                                try :
-                                    reviews = driver.find_element(By.ID, "acrCustomerReviewText").text if len(driver.find_elements(By.ID, "acrCustomerReviewText")) > 0 else "No ratings"
-                                    brand = driver.find_element(By.CSS_SELECTOR, "tr.po-brand .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-brand .po-break-word")) > 0 else "No brand"
+                                description = get_description() # 일반 아이템들은 이거 써야함
+                                print(description[:5])
 
-                                    description = get_description() # 일반 아이템들은 이거 써야함
-                                    print(description[:5])
-                                    
-                                    #description = scrape_product_details()
-                                    
-
-                                    special_feature = driver.find_element(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word")) > 0 else "No special feature"
-                                    #price = driver.find_element(By.CLASS_NAME, "a-price-whole").text + "." + driver.find_element(By.CLASS_NAME, "a-price-fraction").text
-                                    
-                                    price = None
-
-                                    try:
-                                        # a-price-whole과 a-price-fraction에서 각각 가격 찾기
-                                        price_whole = driver.find_element(By.CLASS_NAME, "a-price-whole").text
-                                        price_fraction = driver.find_element(By.CLASS_NAME, "a-price-fraction").text
-                                        price = price_whole + "." + price_fraction
-                                    except:
-                                        # 가격을 못 찾은 경우, 다른 CSS selector로 시도
-                                        try:
-                                            price = driver.find_element(By.CSS_SELECTOR, "#corePrice_feature_div > div > span.a-price.a-text-price.a-size-medium > span:nth-child(2)").text
-                                        except:
-                                            # 여전히 가격을 못 찾으면 다른 CSS selector로 시도 (비워두기)
-                                            try:
-                                                price_whole = driver.find_element(By.CSS_SELECTOR, "#corePrice_desktop > div > table > tbody > tr:nth-child(2) > td.a-span12 > span.a-price.a-text-price.a-size-medium.apexPriceToPay > span:nth-child(2)").text
-                                                price_fraction = ""  # 소수 부분이 없다면 빈 문자열로 설정
-                                                price = price_whole + price_fraction
-                                            except:
-                                                # 모든 시도 실패 시, 가격을 None으로 설정
-                                                price = None
-
-                                    # 가격 출력 (없으면 None)
-                                    print("가격:", price)
-                                    
-                                    total_star = driver.find_element(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base").text if len(driver.find_elements(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base")) > 0 else "No star"
-                                    
-                                    
-                                    
-                                    # total_star 설정
-                                    total_star = driver.find_element(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base").text if len(driver.find_elements(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base")) > 0 else "No star"
-                                    # total_rating_counts 설정
-                                    total_rating_counts = driver.find_element(By.CSS_SELECTOR, "#acrCustomerReviewText").text if len(driver.find_elements(By.CSS_SELECTOR, "#acrCustomerReviewText")) > 0 else "No rating"
-                                    # global_rating_count 설정
-                                    global_rating_count = total_rating_counts.strip("()").replace(",", "") if total_rating_counts != "No rating" else "No rating"
-                                    print(f"global_rating_count: {global_rating_count}")
-                                except Exception as e:
-                                    print(f"e-message = {e}")
-                                # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+                                #description = cosrx_description_to_json()
+                                special_feature = driver.find_element(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word")) > 0 else "No special feature"                                    
                                 
+                                try:
+                                    # a-price-whole과 a-price-fraction에서 각각 가격 찾기 (CSS Selector로 변경)
+                                    #price_whole = driver.find_element(By.CSS_SELECTOR, "#corePrice_feature_div > div > div > div > div > span.a-price.a-text-normal.aok-align-center.reinventPriceAccordionT2 > span:nth-child(2) > span.a-price-whole").text
+                                    #price_fraction = driver.find_element(By.CSS_SELECTOR, "#corePrice_feature_div > div > div > div > div > span.a-price.a-text-normal.aok-align-center.reinventPriceAccordionT2 > span:nth-child(2) > span.a-price-fraction").text
+                                    price_whole = driver.find_element(By.CSS_SELECTOR,"#corePrice_feature_div span.a-price span.a-price-whole").text
+                                    price_fraction = driver.find_element(By.CSS_SELECTOR,"#corePrice_feature_div span.a-price span.a-price-fraction").text
+                                    
+                                    price = price_whole + "." + price_fraction
+                                    print(price,"1")
+                                except:
+                                    # 번들 가격일 가능성 있음
+                                    try : 
+                                        price = driver.execute_script("""
+                                            var priceElement = document.querySelector("#corePrice_desktop > div > table > tbody > tr:nth-child(2) > td.a-span12 > span.a-price.a-text-price.a-size-medium.apexPriceToPay > span:nth-child(2)");
+                                            return priceElement ? priceElement.textContent : null;
+                                        """)
+                                        if price:
+                                            is_bundle = True
+                                            price = price.split("$")[1]
+                                        else :
+                                            is_bundle = False
+                                    except : 
+                                        price = None
+                                        is_bundle = False
 
-                                ##important-information > div:nth-child(3) > p:nth-child(3)
+                                    # 결과 출력
+                                    print("가격:", price)
+                                    print("번들 여부:", is_bundle)
+                                    
+                                total_star = driver.find_element(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base").text if len(driver.find_elements(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base")) > 0 else "No star"
+                                # total_star 설정
+                                total_star = driver.find_element(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base").text if len(driver.find_elements(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base")) > 0 else "No star"
+                                # total_rating_counts 설정
+                                total_rating_counts = driver.find_element(By.CSS_SELECTOR, "#acrCustomerReviewText").text if len(driver.find_elements(By.CSS_SELECTOR, "#acrCustomerReviewText")) > 0 else "No rating"
+                                # global_rating_count 설정
+                                global_rating_count = total_rating_counts.strip("()").replace(",", "") if total_rating_counts != "No rating" else "No rating"
+                                print(f"global_rating_count: {global_rating_count}")
+                                # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$                                
                                 
                                 try:
                                     # Ingredients 요소가 있는지 확인 후 텍스트 추출
@@ -573,6 +569,7 @@ def crawl_amazon(keyword="skin+care"):
                                 except Exception as e:
                                     print(f"Error occurred while fetching Ingredients: {e}")
                                     ingredients_text = None  # 오류 발생 시에도 None으로 설정
+                                    is_bundle = False
 
 
                                 # 결과 출력 (디버깅용)
@@ -611,7 +608,8 @@ def crawl_amazon(keyword="skin+care"):
                                     "total_star_mean": total_star,
                                     "detail_dict": detail_dict,
                                     "best_sellers_rank_Feature": best_sellers_rank_text,
-                                    "Ingredients": ingredients_text
+                                    "Ingredients": ingredients_text,
+                                    "is_bundle": is_bundle
                                 })
 
                                 # rating 이력 있으면 리뷰 정보 가져오기
@@ -630,9 +628,17 @@ def crawl_amazon(keyword="skin+care"):
                                 else:
                                     print(f"{category_name} 리뷰 크롤링")
                                     try:
-                                        more_reviews_link = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[data-hook='see-all-reviews-link-foot']")))
-                                        actions = ActionChains(driver)
-                                        actions.move_to_element(more_reviews_link).perform()  # 링크로 스크롤 이동
+                                        #more_reviews_link = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[data-hook='see-all-reviews-link-foot']")))
+                                        #actions = ActionChains(driver)
+                                        #actions.move_to_element(more_reviews_link).perform()  # 링크로 스크롤 이동
+
+
+                                        more_reviews_link = wait.until(
+                                        EC.presence_of_element_located(
+                                            (By.CSS_SELECTOR, "#reviews-medley-footer > div.a-row.a-spacing-medium > a[data-hook='see-all-reviews-link-foot']")
+                                            )
+                                        )
+
                                         print("스크롤 이동")
 
                                         # 약간의 추가 대기 후 클릭 (화면이 스크롤될 시간이 필요할 수 있음)
@@ -763,7 +769,7 @@ def crawl_amazon(keyword="skin+care"):
 
 
 
-crawl_amazon("cosrx")
+crawl_amazon("PURITO")
 send_msg("크롤링 완료!!!")
 
 
