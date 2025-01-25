@@ -295,6 +295,9 @@ def click_and_wait_for_refresh(brand:str):
             element_locator = (By.CSS_SELECTOR, "#p_123\\/452045 > span > a > span")
         elif brand == brands[3]:
             element_locator = (By.CSS_SELECTOR, "#p_123\\/312482 > span > a > span")
+        elif brand == brands[4]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/654399 > span > a > span")
+    
             
         # 클릭할 요소의 CSS 셀렉터
         
@@ -398,7 +401,7 @@ def crawl_amazon(keyword="skin+care"):
     open_amazon_keyword(keyword)
     amazon_login(ID, PW)
     brands = ["COSRX","Beauty of Joseon","Dr. Jart+","PURITO","I'm from"]
-    click_and_wait_for_refresh(brands[3])
+    click_and_wait_for_refresh(brands[4])
     
 
     try:
@@ -769,7 +772,7 @@ def crawl_amazon(keyword="skin+care"):
 
 
 
-crawl_amazon("PURITO")
+crawl_amazon("I'm from")
 send_msg("크롤링 완료!!!")
 
 
