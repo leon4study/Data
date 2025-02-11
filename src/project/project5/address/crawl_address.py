@@ -79,7 +79,7 @@ time.sleep(5)
 # 클립보드에 복사 버튼 클릭 (버튼을 찾는 방식에 따라 수정 필요)
 
 count = 0
-while count < 40:
+while count < 70:
     time.sleep(0.7)
     click_copy_b()
     wait_time = random.uniform(1.7,2.6)
@@ -117,7 +117,16 @@ for idx, link in enumerate(links):
 
         # 클립보드에서 텍스트 가져오기
         copied_text = pyperclip.paste()
-        new_df = pd.concat([new_df, addr_to_df(copied_text)], ignore_index=True)
+        
+        temp_df = addr_to_df(copied_text)
+        print(temp_df)
+        if temp_df.empty:
+            slack1.send_msg("crawling address 중 오류 발생!")
+            input("계속하려면 엔터 키를 누르세요...")
+            continue
+
+        new_df = pd.concat([new_df, temp_df], ignore_index=True)
+        
         
         click_regen_b()
         time.sleep(wait_time)
