@@ -1,10 +1,16 @@
 import json
 import sys
 import requests
+import dotenv
+import os
+from dotenv import load_dotenv
+
+# 현재 실행 중인 폴더의 .env 파일 자동 로드
+load_dotenv()
 
 def send_msg(msg):
     
-    url = "https://hooks.slack.com/services/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"
+    url = os.getenv("slack_key_url")
     message = ("Crawling 알림\n" + msg) 
     title = (f"New Incoming Message :zap:") # 타이틀 입력
     slack_data = {
