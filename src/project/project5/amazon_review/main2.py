@@ -283,10 +283,9 @@ def check_DrJart():
     
 
 
-def click_and_wait_for_refresh(brand:str):
+def brand_filter_refresh(brand:str): #brands 필터. 체크하면 해당 브랜드만 나옴. (단 체크하려면 해당 브랜드 체크박스 알아야 함.)
     brands = ["COSRX","Beauty of Joseon","Dr. Jart+","PURITO","I'm from"]
     try:
-        
         if brand == brands[0]:
             element_locator = (By.CSS_SELECTOR, "#p_123\\/241477 > span > a > span")  # cosRX
         elif brand == brands[1]:
@@ -396,12 +395,12 @@ def click_BeautyPersonalCareDepartment():
     # 요소를 클릭하거나 원하는 작업 수행
     category_Department.click()
 
-def crawl_amazon(keyword="skin+care"):
+def crawl_amazon(keyword="skin+care", asin_skip = True , sponsored_filter = False):
 
     open_amazon_keyword(keyword)
     amazon_login(ID, PW)
     brands = ["COSRX","Beauty of Joseon","Dr. Jart+","PURITO","I'm from"]
-    click_and_wait_for_refresh(brands[4])
+    brand_filter_refresh(brands[4])
     
 
     try:
@@ -435,7 +434,6 @@ def crawl_amazon(keyword="skin+care"):
                 # 새 창으로 전환
                 driver.switch_to.window(driver.window_handles[-1])
 
-
                 # "Showing results from All Departments" 메시지 확인 및 창 닫기 로직
                 try:
                     time.sleep(0.5)
@@ -459,7 +457,10 @@ def crawl_amazon(keyword="skin+care"):
                     wait_time = random.uniform(0.7,1)
                     time.sleep(wait_time)
 
-                    ASIN_list = get_asin_from_sql()
+                    if asin_skip:
+                        ASIN_list = get_asin_from_sql()
+                    else :
+                        ASIN_list = []
                     
                     # 모든 리스트 아이템 가져오기
                     items = driver.find_elements(By.CSS_SELECTOR, '[role="listitem"]')
@@ -479,9 +480,9 @@ def crawl_amazon(keyword="skin+care"):
                                 print("ASIN PASSED")
                                 continue  # 이미 처리된 ASIN은 건너뜀
                             else:
-                                # 스폰서 아이템 제외
-                                #if is_sponsored(item) :
-                                #    pass
+                                if sponsored_filter : # sponsored_filter 옵션 켰을 경우, sponsored item인 경우 pass
+                                    if is_sponsored(item) :
+                                        pass
 
                                 cnt += 1
                                 ASIN_list.append(ASIN)
@@ -772,7 +773,7 @@ def crawl_amazon(keyword="skin+care"):
 
 
 
-crawl_amazon("I'm from")
+crawl_amazon("I'm from", asin_skip =  True, sponsored_filter= False)
 send_msg("크롤링 완료!!!")
 
 
