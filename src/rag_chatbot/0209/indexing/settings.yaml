@@ -150,9 +150,9 @@ global_search:
   # reduce_max_tokens: 2000
   # concurrency: 32
 
-config_path: "/Users/jun/GitStudy/Data_4/Data/project5/model/openaitest_0206/settings.yaml"
-data_path: "/Users/jun/GitStudy/Data_4/Data/project5/model/openaitest_0206/output/20250206-001434/artifacts"
-root_path: "/Users/jun/GitStudy/Data_4/Data/project5/model/openaitest_0206"
+config_path: "/Users/jun/GitStudy/Data_4/Data/project/project5/model/openaitest_0206/settings.yaml"
+data_path: "/Users/jun/GitStudy/Data_4/Data/project/project5/model/openaitest_0206/output/20250206-001434/artifacts"
+root_path: "/Users/jun/GitStudy/Data_4/Data/project/project5/model/openaitest_0206"
 response_type: "single paragraph"
 method: "local"
 community_level: 2
