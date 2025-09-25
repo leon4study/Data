@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
@@ -41,7 +42,6 @@ my_sql_client = MySqlClient(
 )
 
 ASIN_list = []
-
 
 def amazon_login(id: str, pw: str):
     """
@@ -260,22 +260,153 @@ def get_asin_from_sql():
     finally : return asin_list
 
 
-def crawl_amazon(keyword="skin+care"):
+def check_DrJart():
+    try:
+        # 요소가 로드될 때까지 기다림
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#p_123\\/452045 > span > a > span")))
+
+        # JavaScript를 사용해 해당 요소를 찾음
+        element = driver.execute_script(
+            "return document.querySelector('#p_123\\\\/452045 > span > a > span');"
+        )
+        # 요소 존재 여부 확인
+        if element:
+            print("요소를 성공적으로 찾았습니다.")
+            return True
+        else:
+            print("요소를 찾을 수 없습니다.")
+            return False
+    except Exception as e:
+        # 예외 처리
+        print(f"오류 발생: {e}")
+        return False
+    
+
+
+def brand_filter_refresh(brand:str): #brands 필터. 체크하면 해당 브랜드만 나옴. (단 체크하려면 해당 브랜드 체크박스 알아야 함.)
+    brands = ["COSRX","Beauty of Joseon","Dr. Jart+","PURITO","I'm from"]
+    try:
+        if brand == brands[0]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/241477 > span > a > span")  # cosRX
+        elif brand == brands[1]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/591445 > span > a > span")
+        elif brand == brands[2]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/452045 > span > a > span")
+        elif brand == brands[3]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/312482 > span > a > span")
+        elif brand == brands[4]:
+            element_locator = (By.CSS_SELECTOR, "#p_123\\/654399 > span > a > span")
+    
+            
+        # 클릭할 요소의 CSS 셀렉터
+        
+        # 요소가 클릭 가능할 때까지 기다림
+        element = wait.until(EC.element_to_be_clickable(element_locator))
+
+        # 현재 페이지 상태를 저장
+        old_page = driver.find_element(By.TAG_NAME, 'html')
+
+        # 요소 클릭
+        element.click()
+        print("요소를 클릭했습니다. 페이지 리프레시를 기다리는 중...")
+
+        # 페이지 리프레시 대기
+        wait.until(EC.staleness_of(old_page))  # 기존 페이지가 사라질 때까지 대기
+        print("페이지 리프레시 완료.")
+        return True
+
+    except TimeoutException:
+        print("페이지 리프레시가 완료되지 않았습니다.")
+        return False
+
+    except NoSuchElementException:
+        print("클릭할 요소를 찾을 수 없습니다.")
+        return False
+
+    except Exception as e:
+        print(f"오류 발생: {e}")
+        return False
+
+
+
+def get_description():
+    try :
+        result = {}
+        # "feature-bullets" ID가 있는 요소를 기다린 후 가져오기
+        feature_bullets = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "feature-bullets"))
+        )
+        # "About this item" 섹션에서 텍스트 추출
+        feature_items = feature_bullets.find_elements(By.CSS_SELECTOR, "ul.a-unordered-list li span.a-list-item")
+
+        # 텍스트를 추출하고 한 문자열로 합침
+        description = "\n".join([item.text.strip() for item in feature_items])
+        result["description"] = description
+
+        json_result = json.dumps(result, ensure_ascii=False, indent=4)
+        return json_result
+    except Exception as e:
+        print(f"scrape_product_details 오류 발생: {e}")
+        return None
+
+
+def cosrx_description_to_json():
+    try:
+        # 결과를 저장할 딕셔너리
+        result = {}
+        # visual-rich-product-description 안의 모든 섹션 가져오기
+        container = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "visual-rich-product-description"))
+        )
+        sections = container.find_elements(By.CSS_SELECTOR, ".a-column.a-span4")
+        for section in sections:
+            try:
+                # 제목 (h4)와 내용 (span) 추출
+                time.sleep(0.2)  # 페이지 로드 안정성을 위해 짧은 대기
+                title = section.find_element(By.CSS_SELECTOR, "h4").text.strip()
+                content = section.find_element(By.CSS_SELECTOR, ".visualRpdText").text.strip()
+                result[title] = content
+            except Exception as e:
+                # 일부 섹션에서 데이터가 없을 경우 무시
+                print(f"섹션에서 데이터 추출 실패: {e}")
+                continue
+
+        # JSON 형식으로 변환하여 반환
+        json_result = json.dumps(result, ensure_ascii=False, indent=4)
+        return json_result
+    except Exception as e:
+        print(f"scrape_product_details 오류 발생: {e}")
+        return None
+
+
+def is_sponsored(item):
+    try:
+        if item.find_elements(By.CLASS_NAME, "puis-sponsored-label-text"):  # Sponsored 라벨 존재 확인
+            ("Sponsored_passed")
+            return True  # Sponsored 항목은 건너뜀
+    except Exception as e:
+        print(f"Sponsored 라벨 확인 중 에러 발생: {e}")
+        # 에러가 발생하면 Sponsored 여부를 무시하고 다음 로직 실행
+    return False
+
+def click_BeautyPersonalCareDepartment():
+    # Beauty & Personal Care Department 선택 (클릭))
+    category_Department = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#n\\/3760911')))
+    # 요소를 클릭하거나 원하는 작업 수행
+    category_Department.click()
+
+def crawl_amazon(keyword="skin+care", asin_skip = True , sponsored_filter = False):
 
     open_amazon_keyword(keyword)
     amazon_login(ID, PW)
+    brands = ["COSRX","Beauty of Joseon","Dr. Jart+","PURITO","I'm from"]
+    brand_filter_refresh(brands[4])
+    
 
     try:
-        # Beauty & Personal Care Department 선택 (클릭))
-        category_Department = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#n\\/3760911')))
-
-        # 요소를 클릭하거나 원하는 작업 수행
-        category_Department.click()
-
+        time.sleep(1.5)
         select_best_sellers()
-
         time.sleep(1)
-
 
         # 크롤링할 요소 선택 (CSS Selector 사용)
         # Makeup
@@ -302,13 +433,34 @@ def crawl_amazon(keyword="skin+care"):
 
                 # 새 창으로 전환
                 driver.switch_to.window(driver.window_handles[-1])
+
+                # "Showing results from All Departments" 메시지 확인 및 창 닫기 로직
+                try:
+                    time.sleep(0.5)
+                    all_dept_message = driver.find_element(
+                        By.CSS_SELECTOR,
+                        '#search > div.s-desktop-width-max.s-desktop-content.s-opposite-dir.s-wide-grid-style.sg-row > div.sg-col-20-of-24.s-matching-dir.sg-col-16-of-20.sg-col.sg-col-8-of-12.sg-col-12-of-16 > div > span.rush-component.s-latency-cf-section > div.s-main-slot.s-result-list.s-search-results.sg-row > div:nth-child(1) > div > div > div > h2 > span'
+                    )
+                    if all_dept_message.text.strip() == "Showing results from All Departments":
+                        print("Found 'Showing results from All Departments', closing the tab.")
+                        driver.close()
+                        driver.switch_to.window(driver.window_handles[0])
+                        continue
+                except :
+                    print("'Showing results from All Departments' 메시지 없음, 계속 진행합니다.")
+
+
                 # ===================================================
                 cnt = 0
-                while cnt < 120:
+                while cnt < 1000:
                     time.sleep(0.5)
+                    wait_time = random.uniform(0.7,1)
                     time.sleep(wait_time)
 
-                    ASIN_list = get_asin_from_sql()
+                    if asin_skip:
+                        ASIN_list = get_asin_from_sql()
+                    else :
+                        ASIN_list = []
                     
                     # 모든 리스트 아이템 가져오기
                     items = driver.find_elements(By.CSS_SELECTOR, '[role="listitem"]')
@@ -319,19 +471,18 @@ def crawl_amazon(keyword="skin+care"):
                     
                     # 각 아이템 클릭 및 상세 정보 크롤링
                     for idx, item in enumerate(items):
+                        is_bundle = False
+                        print(f"index: {idx}")
                         try:
                             ASIN = item.get_attribute("data-asin")
+                            print(f"ASIN: {ASIN}")
                             if ASIN in ASIN_list:
                                 print("ASIN PASSED")
                                 continue  # 이미 처리된 ASIN은 건너뜀
                             else:
-                                # try:
-                                #    if item.find_elements(By.CLASS_NAME, "puis-sponsored-label-text"):  # Sponsored 라벨 존재 확인
-                                #        ("Sponsored_passed")
-                                #        continue  # Sponsored 항목은 건너뜀
-                                # except Exception as e:
-                                #    print(f"Sponsored 라벨 확인 중 에러 발생: {e}")
-                                #    # 에러가 발생하면 Sponsored 여부를 무시하고 다음 로직 실행
+                                if sponsored_filter : # sponsored_filter 옵션 켰을 경우, sponsored item인 경우 pass
+                                    if is_sponsored(item) :
+                                        pass
 
                                 cnt += 1
                                 ASIN_list.append(ASIN)
@@ -363,34 +514,70 @@ def crawl_amazon(keyword="skin+care"):
 
                                 # 상품 제목
                                 title = driver.find_element(By.ID, "productTitle").text
+                                print(f"Title: {title}")
                                 reviews = driver.find_element(By.ID, "acrCustomerReviewText").text if len(driver.find_elements(By.ID, "acrCustomerReviewText")) > 0 else "No ratings"
                                 brand = driver.find_element(By.CSS_SELECTOR, "tr.po-brand .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-brand .po-break-word")) > 0 else "No brand"
-                                
-                                # "feature-bullets" ID가 있는 요소를 기다린 후 가져오기
-                                feature_bullets = WebDriverWait(driver, 10).until(
-                                    EC.presence_of_element_located((By.ID, "feature-bullets"))
-                                )
-                                # "About this item" 섹션에서 텍스트 추출
-                                feature_items = feature_bullets.find_elements(By.CSS_SELECTOR, "ul.a-unordered-list li span.a-list-item")
 
-                                # 텍스트를 추출하고 한 문자열로 합침
-                                description = "\n".join([item.text.strip() for item in feature_items])
+                                description = get_description() # 일반 아이템들은 이거 써야함
                                 print(description[:5])
 
-                                special_feature = driver.find_element(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word")) > 0 else "No special feature"
-                                price = driver.find_element(By.CLASS_NAME, "a-price-whole").text + "." + driver.find_element(By.CLASS_NAME, "a-price-fraction").text
+                                #description = cosrx_description_to_json()
+                                special_feature = driver.find_element(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word").text if len(driver.find_elements(By.CSS_SELECTOR, "tr.po-special_feature .po-break-word")) > 0 else "No special feature"                                    
+                                
+                                try:
+                                    # a-price-whole과 a-price-fraction에서 각각 가격 찾기 (CSS Selector로 변경)
+                                    #price_whole = driver.find_element(By.CSS_SELECTOR, "#corePrice_feature_div > div > div > div > div > span.a-price.a-text-normal.aok-align-center.reinventPriceAccordionT2 > span:nth-child(2) > span.a-price-whole").text
+                                    #price_fraction = driver.find_element(By.CSS_SELECTOR, "#corePrice_feature_div > div > div > div > div > span.a-price.a-text-normal.aok-align-center.reinventPriceAccordionT2 > span:nth-child(2) > span.a-price-fraction").text
+                                    price_whole = driver.find_element(By.CSS_SELECTOR,"#corePrice_feature_div span.a-price span.a-price-whole").text
+                                    price_fraction = driver.find_element(By.CSS_SELECTOR,"#corePrice_feature_div span.a-price span.a-price-fraction").text
+                                    
+                                    price = price_whole + "." + price_fraction
+                                    print(price,"1")
+                                except:
+                                    # 번들 가격일 가능성 있음
+                                    try : 
+                                        price = driver.execute_script("""
+                                            var priceElement = document.querySelector("#corePrice_desktop > div > table > tbody > tr:nth-child(2) > td.a-span12 > span.a-price.a-text-price.a-size-medium.apexPriceToPay > span:nth-child(2)");
+                                            return priceElement ? priceElement.textContent : null;
+                                        """)
+                                        if price:
+                                            is_bundle = True
+                                            price = price.split("$")[1]
+                                        else :
+                                            is_bundle = False
+                                    except : 
+                                        price = None
+                                        is_bundle = False
+
+                                    # 결과 출력
+                                    print("가격:", price)
+                                    print("번들 여부:", is_bundle)
+                                    
                                 total_star = driver.find_element(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base").text if len(driver.find_elements(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base")) > 0 else "No star"
-                                
-                                # total_rating counts
-                                # totaL_rating_counts = driver.find_element(By.CSS_SELECTOR, "#acrCustomerReviewText").text
-                                # global_rating_count = int(totaL_rating_counts.strip("()").replace(",", ""))
-                                
                                 # total_star 설정
                                 total_star = driver.find_element(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base").text if len(driver.find_elements(By.CSS_SELECTOR, ".a-popover-trigger .a-size-small.a-color-base")) > 0 else "No star"
                                 # total_rating_counts 설정
                                 total_rating_counts = driver.find_element(By.CSS_SELECTOR, "#acrCustomerReviewText").text if len(driver.find_elements(By.CSS_SELECTOR, "#acrCustomerReviewText")) > 0 else "No rating"
                                 # global_rating_count 설정
                                 global_rating_count = total_rating_counts.strip("()").replace(",", "") if total_rating_counts != "No rating" else "No rating"
+                                print(f"global_rating_count: {global_rating_count}")
+                                # $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$                                
+                                
+                                try:
+                                    # Ingredients 요소가 있는지 확인 후 텍스트 추출
+                                    ingredients_elements = driver.find_elements(By.CSS_SELECTOR, "#important-information > div:nth-child(3) > p:nth-child(3)")
+                                    if ingredients_elements:  # 요소가 존재하면 텍스트 추출
+                                        ingredients_text = ingredients_elements[0].text.strip()
+                                    else:  # 요소가 없으면 None으로 설정
+                                        ingredients_text = None
+                                except Exception as e:
+                                    print(f"Error occurred while fetching Ingredients: {e}")
+                                    ingredients_text = None  # 오류 발생 시에도 None으로 설정
+                                    is_bundle = False
+
+
+                                # 결과 출력 (디버깅용)
+                                print(f"Ingredients: {ingredients_text}")
 
                                 # Best Sellers Rank 정보 가져오기
                                 best_sellers_elements = driver.find_elements(By.CSS_SELECTOR, "ul.detail-bullet-list > li > span.a-list-item")
@@ -412,7 +599,6 @@ def crawl_amazon(keyword="skin+care"):
                                 print(f"Title: {title}")
                                 print(f"global_rating_count: {global_rating_count}")
                                 print(f"price: {price}")
-                                print(f"idx : {idx}")
                                 print()
 
                                 item_list.append({
@@ -425,7 +611,9 @@ def crawl_amazon(keyword="skin+care"):
                                     "Special_Feature": special_feature,
                                     "total_star_mean": total_star,
                                     "detail_dict": detail_dict,
-                                    "best_sellers_rank_Feature": best_sellers_rank_text
+                                    "best_sellers_rank_Feature": best_sellers_rank_text,
+                                    "Ingredients": ingredients_text,
+                                    "is_bundle": is_bundle
                                 })
 
                                 # rating 이력 있으면 리뷰 정보 가져오기
@@ -444,21 +632,29 @@ def crawl_amazon(keyword="skin+care"):
                                 else:
                                     print(f"{category_name} 리뷰 크롤링")
                                     try:
-                                        see_more_reviews_link = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[data-hook='see-all-reviews-link-foot']")))
-                                        actions = ActionChains(driver)                    
-                                        actions.move_to_element(see_more_reviews_link).perform()  # 링크로 스크롤 이동
+                                        #more_reviews_link = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[data-hook='see-all-reviews-link-foot']")))
+                                        #actions = ActionChains(driver)
+                                        #actions.move_to_element(more_reviews_link).perform()  # 링크로 스크롤 이동
+
+
+                                        more_reviews_link = wait.until(
+                                        EC.presence_of_element_located(
+                                            (By.CSS_SELECTOR, "#reviews-medley-footer > div.a-row.a-spacing-medium > a[data-hook='see-all-reviews-link-foot']")
+                                            )
+                                        )
+
                                         print("스크롤 이동")
 
                                         # 약간의 추가 대기 후 클릭 (화면이 스크롤될 시간이 필요할 수 있음)
                                         time.sleep(0.5)
-                                        see_more_reviews_link.click()
+                                        more_reviews_link.click()
                                         print("링크 클릭")
                                         
                                         set_sort_by_most_recent_with_scroll()
                                         print("스크롤 실행 완료")
                                         # 리뷰 요소를 모두 가져옵니다
                                         review_count = 0  # 수집한 리뷰 개수를 관리하는 변수
-                                        max_reviews = 50  # 최대 수집 리뷰 수
+                                        max_reviews = 20000  # 최대 수집 리뷰 수
                                         
                                         try:
                                             
@@ -490,10 +686,9 @@ def crawl_amazon(keyword="skin+care"):
                                                             else "No review"
                                                         )
                                                         content = detail_review.find_element(By.CSS_SELECTOR, "span[data-hook='review-body']").text if len(detail_review.find_elements(By.CSS_SELECTOR, "span[data-hook='review-body']")) > 0 else "No content"
-
+                                                        
                                                         # 디버깅 출력
                                                         print(f"Review {review_count} - customer_id: {customer_id}, customer_name: {customer_name}, review_title: {review_title}, review_rating: {review_rating}")
-
                                                         reviews_list.append({
                                                             "review_num": ASIN + "__" + str(review_count),
                                                             "ASIN": ASIN,
@@ -508,20 +703,15 @@ def crawl_amazon(keyword="skin+care"):
                                                     except Exception as e:
                                                         print(f"Error extracting review {review_count + 1}: {e}")
                                                         continue
-
                                                 if review_count >= max_reviews:  # 최대 리뷰 수에 도달하면 종료
                                                     break
-
                                                 if not click_next_review_page():  # 다음 페이지로 이동 불가 시 종료
                                                     break
-
                                         except Exception as e:
                                             print(f"Error retrieving reviews: {e}")
-
                                     except Exception as e:
                                         print(f"see_more_reviews ERROR : {e}")
                                 
-
                                 # DataFrame 변환
                                 item_df = pd.json_normalize(item_list)
 
@@ -581,16 +771,9 @@ def crawl_amazon(keyword="skin+care"):
 
 # 함수 실행
 
-["COSRX",
-"Laneige",
-"Innisfree",
-"Some By Mi",
-"Beauty of Joseon",
-"VT Cosmetics",
-"Numbuzin",
-"Sulwhasoo",
-"Dr. Jart+",
-"Klairs"]
 
-crawl_amazon("K-beauty")
+
+crawl_amazon("I'm from", asin_skip =  True, sponsored_filter= False)
 send_msg("크롤링 완료!!!")
+
+
